@@ -20,7 +20,7 @@
     .board-wrap { padding:10px; border-radius:19px; background:linear-gradient(145deg,#393052,#211e38); border:1px solid #51466f; box-shadow:0 18px 45px #0007,inset 0 1px #ffffff20; touch-action:none; user-select:none; }
     #board { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:5px; }
     .cell { aspect-ratio:1; min-width:0; display:grid; place-items:center; border-radius:50%; background:#171529; position:relative; }
-    .orb { width:88%; height:88%; border-radius:50%; border:2px solid #ffffff38; box-shadow:inset -5px -7px 10px #0004,inset 4px 4px 7px #ffffff45,0 3px 5px #0006; transition:transform .08s,filter .08s; position:relative; }
+    @keyframes fallIn { from { transform:translateY(-28px) scale(.92); opacity:.65; } to { transform:translateY(0) scale(1); opacity:1; } }\n    .orb { animation:fallIn .2s ease-out both; width:88%; height:88%; border-radius:50%; border:2px solid #ffffff38; box-shadow:inset -5px -7px 10px #0004,inset 4px 4px 7px #ffffff45,0 3px 5px #0006; transition:transform .08s,filter .08s; position:relative; }
     .orb::after { content:""; position:absolute; width:29%; height:18%; top:15%; left:20%; border-radius:50%; background:#ffffff8c; filter:blur(1px); transform:rotate(-35deg); }
     .orb.selected { transform:scale(.83); filter:brightness(1.35); outline:3px solid #fff; outline-offset:1px; }
     .orb.popping { transform:scale(.15); opacity:0; transition:transform .16s,opacity .16s; }
