@@ -18,12 +18,12 @@ main{width:min(100%,520px)}
 #best{font-size:12px;color:#c1dff5;margin-left:5px}
 button{width:42px;height:42px;border:1px solid #a8dcff70;border-radius:50%;background:linear-gradient(145deg,#2875aa,#10436f);color:#effaff;font-size:21px;box-shadow:0 4px 14px #001a35aa;cursor:pointer}
 button:active{transform:scale(.93)}
-.arena{position:relative;width:100%;height:min(72vh,680px);min-height:470px;border-radius:34px;overflow:hidden;border:1px solid #9bdcff80;background:linear-gradient(180deg,#0b3965 0%,#092d52 55%,#071f3d 100%);box-shadow:0 22px 55px #00152eaa,inset 0 2px 12px #a7e1ff20;touch-action:none}
+.arena{position:relative;width:min(100%,min(72vh,520px));aspect-ratio:1;height:auto;min-height:0;margin:0 auto;border-radius:50%;overflow:hidden;border:1px solid #9bdcff80;background:linear-gradient(180deg,#0b3965 0%,#092d52 55%,#071f3d 100%);box-shadow:0 22px 55px #00152eaa,inset 0 2px 12px #a7e1ff20;touch-action:none}
 .arena:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,#66c8ff20,transparent 60%),linear-gradient(90deg,#061b3520,transparent 15%,transparent 85%,#061b3520)}
 canvas{display:block;width:100%;height:100%;touch-action:none}
 .under{display:flex;justify-content:space-between;align-items:center;padding:11px 5px 0;color:#b1d3ed;font-size:12px;min-height:32px}
 #chain{font-size:14px;color:#fff;font-weight:750;text-shadow:0 0 10px #83d9ff}
-@media(max-width:390px){body{padding:8px 7px}.arena{height:70vh;min-height:430px;border-radius:26px}.top{margin-bottom:8px}}
+@media(max-width:390px){body{padding:8px 7px}.arena{width:min(100%,70vh)}.top{margin-bottom:8px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
 </head>
@@ -42,21 +42,23 @@ const colors=["#ff647d","#ffd34e","#56d99a","#aa86ff","#ff9852"];
 let W=0,H=0,D=1,R=23,balls=[],chain=[],active=false,pointer=null,score=0,best=0,last=0,raf=0,clearing=false;
 const randColor=()=>Math.floor(Math.random()*colors.length);
 const rand=(a,b)=>a+Math.random()*(b-a);
+function cx(){return W/2}function cy(){return H/2}function bowlRadius(){return Math.min(W,H)*.485}
 function resize(){
  const rect=arena.getBoundingClientRect();D=Math.min(devicePixelRatio||1,2);W=rect.width;H=rect.height;
  canvas.width=Math.round(W*D);canvas.height=Math.round(H*D);ctx.setTransform(D,0,0,D,0,0);
- R=Math.max(16,Math.min(25,W/17.5));
- if(!balls.length)seed();else{for(const b of balls){b.x=Math.max(R,Math.min(W-R,b.x));b.y=Math.max(R,Math.min(H-R,b.y))}}
+ R=Math.max(13,Math.min(24,W/18));
+ if(!balls.length)seed();else{const br=bowlRadius();for(const b of balls){const dx=b.x-cx(),dy=b.y-cy(),d=Math.hypot(dx,dy),limit=br-b.r;if(d>limit&&d>0){b.x=cx()+dx/d*limit;b.y=cy()+dy/d*limit}}}
 }
-function makeBall(x,y,color=randColor(),vy=0){return{x,y,vx:rand(-.35,.35),vy,r:R*rand(.94,1.04),color,spin:rand(0,Math.PI*2),born:0,dead:false}}
+function makeBall(x,y,color=randColor(),vy=0){return{x,y,vx:rand(-.12,.12),vy,r:R*rand(.94,1.04),color,spin:rand(0,Math.PI*2),born:0,dead:false,sleep:false,sleepTicks:0}}
 function seed(){
- balls=[];const spacing=R*2.02;
- for(let row=0;row<Math.ceil((H-R*2)/spacing);row++){
+ balls=[];const spacing=R*2.02,rowStep=R*1.76,br=bowlRadius();let row=0;
+ for(let y=cy()-br+R;y<=cy()+br-R;y+=rowStep,row++){
+  const half=Math.sqrt(Math.max(0,br*br-(y-cy())*(y-cy())))-R;
   const offset=row%2?R:0;
-  for(let x=R+offset;x<W-R;x+=spacing){balls.push(makeBall(x+rand(-1.8,1.8),R+row*spacing,randColor(),rand(-.2,.3)))}
+  for(let x=cx()-half+offset;x<=cx()+half;x+=spacing)balls.push(makeBall(x+rand(-.5,.5),y,randColor(),0));
  }
 }
-function addBall(){balls.push(makeBall(rand(R,W-R),-R*2,randColor(),rand(0,1)))}
+function addBall(){balls.push(makeBall(cx()+rand(-bowlRadius()*.28,bowlRadius()*.28),-R*2,randColor(),rand(0,.3)))}
 function scoreUI(){scoreEl.textContent=score.toLocaleString("ja-JP");bestEl.textContent="BEST "+best}
 function nearest(x,y,maxDist=R*1.45,exclude=new Set()){
  let found=null,dist=maxDist;
@@ -88,23 +90,26 @@ function clearChain(){
  setTimeout(()=>{balls=balls.filter(b=>!b.dead);for(let i=0;i<n;i++)addBall();clearing=false;chainEl.textContent="";},160);
 }
 function physics(dt){
- const step=Math.min(dt,24)/16.6667,g=.31*step;
+ const step=Math.min(dt,24)/16.6667,g=.30*step,br=bowlRadius(),topGap=.48;
  for(const b of balls){
-  b.vy+=g;b.vx*=.999;b.vy*=.999;b.x+=b.vx*step;b.y+=b.vy*step;
-  if(b.x<b.r){b.x=b.r;b.vx=Math.abs(b.vx)*.72}
-  if(b.x>W-b.r){b.x=W-b.r;b.vx=-Math.abs(b.vx)*.72}
-  if(b.y<b.r){b.y=b.r;b.vy=Math.abs(b.vy)*.48}
-  if(b.y>H-b.r){b.y=H-b.r;b.vy=-Math.abs(b.vy)*.28;if(Math.abs(b.vy)<.55)b.vy=0}
+  if(!b.sleep){b.vy+=g;b.vx*=.992;b.vy*=.992;b.x+=b.vx*step;b.y+=b.vy*step;}
+  const dx=b.x-cx(),dy=b.y-cy(),dist=Math.hypot(dx,dy),limit=br-b.r;
+  const angle=Math.atan2(dy,dx),fromTop=Math.abs(Math.atan2(Math.sin(angle+Math.PI/2),Math.cos(angle+Math.PI/2)));
+  if(dist>limit&&!(dy<0&&fromTop<topGap)){
+   const nx=dx/(dist||1),ny=dy/(dist||1),outward=b.vx*nx+b.vy*ny;
+   b.x=cx()+nx*limit;b.y=cy()+ny*limit;
+   if(outward>0){b.vx-=1.12*outward*nx;b.vy-=1.12*outward*ny;b.vx*=.985;b.vy*=.985;}
+  }
  }
- // Circle-to-circle collisions; a small positional correction keeps the pile stable.
- for(let pass=0;pass<2;pass++)for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
+ for(let pass=0;pass<3;pass++)for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
   const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy),min=a.r+b.r;
   if(dist>=min||dist===0)continue;
   const nx=dx/dist,ny=dy/dist,overlap=min-dist;
   a.x-=nx*overlap*.5;a.y-=ny*overlap*.5;b.x+=nx*overlap*.5;b.y+=ny*overlap*.5;
   const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
-  if(rel<0){const impulse=-(1.22)*rel*.5;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny}
+  if(rel<-.015){a.sleep=false;b.sleep=false;a.sleepTicks=0;b.sleepTicks=0;const impulse=-.72*rel*.5;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny;}
  }
+ for(const b of balls){if(b.sleep)continue;const speed=Math.hypot(b.vx,b.vy);if(speed<.20){if(++b.sleepTicks>12){b.vx=0;b.vy=0;b.sleep=true;}}else b.sleepTicks=0;}
 }
 function drawBall(b){
  const grad=ctx.createRadialGradient(b.x-b.r*.36,b.y-b.r*.43,b.r*.06,b.x,b.y,b.r*1.12);
