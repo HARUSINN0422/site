@@ -63,17 +63,9 @@ function seed(){
 }
 }
 function addBall(){
- const br=bowlRadius(),radius=R*.95,limit=br-radius-1.2;
- let bestX=cx(),bestY=cy()-br+radius+2,bestClearance=-Infinity;
- // Search the upper inside of the sealed bowl for the least-crowded spawn point.
- for(let y=cy()-limit;y<cy()-br+R*9;y+=R*.55){
-  const dy=y-cy(),maxX=Math.sqrt(Math.max(0,limit*limit-dy*dy));
-  for(let x=cx()-maxX;x<=cx()+maxX;x+=R*.62){
-   let clearance=Infinity;
-   for(const b of balls){
-    const gap=Math.hypot(b.x-x,b.y-y)-(b.r+radius);
-    if(gap<clearance)clearance=gap;
-   }
+ // Balls enter from above through a narrow opening at the top of the bowl.
+ balls.push(makeBall(cx()+rand(-R*.35,R*.35),-R*2.2,randColor(),0));
+}
    if(!balls.length)clearance=0;
    if(clearance>bestClearance){bestClearance=clearance;bestX=x;bestY=y;}
   }
@@ -114,6 +106,51 @@ function physics(dt){
   b.vx*=Math.exp(-1.7*step);b.vy*=Math.exp(-.32*step);
   b.x+=b.vx*step;b.y+=b.vy*step;
  }
+ // A small top entrance is open only for balls moving downward into the bowl.
+ for(let pass=0;pass<10;pass++){
+  for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
+   const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y;
+   let dist=Math.hypot(dx,dy);const min=a.r+b.r;
+   if(dist>=min)continue;
+   if(dist<.0001)dist=.0001;
+   const nx=dx/dist,ny=dy/dist,overlap=min-dist;
+   const correction=Math.max(0,overlap-.005)*.52;
+   a.x-=nx*correction;a.y-=ny*correction;
+   b.x+=nx*correction;b.y+=ny*correction;
+   if(overlap>.05){if(!a.sleep){a.sleepTime=0;}if(!b.sleep){b.sleepTime=0;}}
+   const rvx=(b.sleep?0:b.vx)-(a.sleep?0:a.vx);
+   const rvy=(b.sleep?0:b.vy)-(a.sleep?0:a.vy);
+   const along=rvx*nx+rvy*ny;
+   if(along<0){
+    const impulse=-1.025*along*.5;
+    if(!a.sleep){a.vx-=impulse*nx;a.vy-=impulse*ny;}
+    if(!b.sleep){b.vx+=impulse*nx;b.vy+=impulse*ny;}
+    if(Math.abs(along)>8){a.sleep=false;b.sleep=false;a.sleepTime=0;b.sleepTime=0;}
+   }
+  }
+  for(const b of balls){
+   const dx=b.x-cx(),dy=b.y-cy(),dist=Math.hypot(dx,dy),limit=wallLimit(b);
+   if(dist>limit){
+    const nx=dx/(dist||1),ny=dy/(dist||1);
+    const nearTop=Math.abs(dx)<br*.38 && dy<0;
+    const entering=nearTop && b.vy>0;
+    if(entering)continue;
+    b.x=cx()+nx*limit;b.y=cy()+ny*limit;
+    const outward=(b.sleep?0:b.vx)*nx+(b.sleep?0:b.vy)*ny;
+    if(outward>0){
+     b.vx-=1.03*outward*nx;b.vy-=1.03*outward*ny;
+     b.vx*=.985;b.vy*=.985;
+    }
+   }
+  }
+ }
+ for(const b of balls){
+  if(b.sleep)continue;
+  const speed=Math.hypot(b.vx,b.vy);
+  if(speed<9){b.sleepTime+=step;if(b.sleepTime>.55){b.vx=0;b.vy=0;b.sleep=true;}}
+  else b.sleepTime=0;
+ }
+}
  for(let pass=0;pass<10;pass++){
   for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
    const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y;
