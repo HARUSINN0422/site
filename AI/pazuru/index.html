@@ -3,139 +3,133 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07182e">
-<title>Blue Orbs</title>
+<meta name="theme-color" content="#082b50">
+<title>Color Drop</title>
 <style>
-:root{color-scheme:dark;--ink:#eaf6ff;--blue:#64c9ff}
+:root{color-scheme:dark;--ink:#eff8ff}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
-body{min-height:100vh;display:flex;justify-content:center;align-items:center;padding:14px;background:radial-gradient(ellipse at 50% 8%,#153d67 0,#0a2544 38%,#061426 100%);overflow-x:hidden}
+body{min-height:100vh;display:flex;justify-content:center;align-items:center;padding:12px;background:radial-gradient(ellipse at 50% 0%,#2879b4 0,#125080 34%,#092e54 70%,#061b35 100%);overflow-x:hidden}
 main{width:min(100%,520px)}
-.top{display:flex;align-items:center;justify-content:space-between;margin:0 3px 12px}
-.scorebox{display:flex;align-items:baseline;gap:9px}
-.scorebox small{font-size:12px;letter-spacing:.12em;color:#91b9d8}
-#score{font-size:clamp(25px,7vw,34px);font-weight:750;letter-spacing:.02em;font-variant-numeric:tabular-nums;text-shadow:0 2px 16px #55baff55}
-#best{font-size:13px;color:#a8c9e5;margin-left:8px}
-button{width:42px;height:42px;border:1px solid #8bcfff55;border-radius:50%;background:linear-gradient(145deg,#1b4d78,#102d4c);color:#dff5ff;font-size:21px;box-shadow:0 4px 14px #0004;cursor:pointer}
+.top{display:flex;align-items:center;justify-content:space-between;margin:0 4px 12px}
+.scorebox{display:flex;align-items:baseline;gap:10px}
+.scorebox small{font-size:12px;letter-spacing:.14em;color:#b4d8f2}
+#score{font-size:clamp(27px,7vw,36px);font-weight:800;font-variant-numeric:tabular-nums;text-shadow:0 2px 18px #8bd8ff55}
+#best{font-size:12px;color:#c1dff5;margin-left:5px}
+button{width:42px;height:42px;border:1px solid #a8dcff70;border-radius:50%;background:linear-gradient(145deg,#2875aa,#10436f);color:#effaff;font-size:21px;box-shadow:0 4px 14px #001a35aa;cursor:pointer}
 button:active{transform:scale(.93)}
-.frame{position:relative;padding:8px;border-radius:25px;background:linear-gradient(145deg,#28608a,#12395f 45%,#0c2a49);border:1px solid #83caff55;box-shadow:0 18px 48px #0008,inset 0 1px #ffffff25}
-#board{position:relative;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:clamp(2px,.8vw,5px);touch-action:none;user-select:none;-webkit-user-select:none}
-.cell{aspect-ratio:1;min-width:0;position:relative;display:grid;place-items:center}
-.orb{width:97%;height:97%;border-radius:50%;position:relative;border:1px solid #d9f3ff65;box-shadow:inset -5px -7px 10px #00172d65,inset 3px 4px 8px #ffffff65,0 3px 5px #001326a8;will-change:transform;transform:translateZ(0);transition:transform .11s cubic-bezier(.2,.8,.2,1),filter .11s;overflow:hidden}
-.orb:before{content:"";position:absolute;left:17%;top:11%;width:48%;height:25%;border-radius:50%;background:linear-gradient(180deg,#fffebd,#ffffff22);filter:blur(1.5px);transform:rotate(-28deg);opacity:.86}
-.orb:after{content:"";position:absolute;right:17%;bottom:14%;width:17%;height:12%;border-radius:50%;background:#e5f7ff55;filter:blur(2px)}
-.c0{background:radial-gradient(circle at 34% 26%,#c6efff 0%,#55b8ff 33%,#1875c9 72%,#0b438e 100%)}
-.c1{background:radial-gradient(circle at 34% 26%,#d5f8ff 0%,#68e0f4 32%,#159ecb 72%,#08618f 100%)}
-.c2{background:radial-gradient(circle at 34% 26%,#d7e5ff 0%,#829eff 34%,#4166d6 72%,#263b91 100%)}
-.c3{background:radial-gradient(circle at 34% 26%,#d0f4ff 0%,#50c9df 32%,#197fba 72%,#124b7e 100%)}
-.c4{background:radial-gradient(circle at 34% 26%,#e0eaff 0%,#a1c5f7 33%,#5489ce 72%,#2b568f 100%)}
-.orb.selected{transform:scale(1.08);filter:brightness(1.22);z-index:2;box-shadow:inset -4px -6px 9px #00172d55,inset 3px 4px 8px #ffffff88,0 0 0 2px #e9faff,0 0 15px 5px #6bcaffb8}
-.orb.popping{transform:scale(.05) rotate(35deg);opacity:0;filter:brightness(2);transition:transform .19s cubic-bezier(.2,.8,.2,1),opacity .16s}
-@keyframes drop{0%{transform:translateY(-95%) scale(.88);opacity:.25}65%{transform:translateY(5%) scale(1.025)}82%{transform:translateY(-2%) scale(.99)}100%{transform:translateY(0) scale(1);opacity:1}}
-.orb.fresh{animation:drop .38s cubic-bezier(.2,.72,.25,1) both}
-#trail{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:3}
-#trail path{fill:none;stroke:#e7f8ff;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;opacity:.9;filter:drop-shadow(0 0 5px #5acaff) drop-shadow(0 0 10px #3daaff)}
-#trail circle{fill:#e8faff;filter:drop-shadow(0 0 5px #59caff)}
-.under{display:flex;justify-content:space-between;align-items:center;padding:11px 5px 0;color:#86abc9;font-size:12px}
-#chain{font-size:14px;color:#d5efff;font-weight:650;min-height:20px}
-@media(max-width:390px){body{padding:9px 7px}.frame{padding:6px;border-radius:19px}.top{margin-bottom:8px}.under{padding-top:8px}}
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.arena{position:relative;width:100%;height:min(72vh,680px);min-height:470px;border-radius:34px;overflow:hidden;border:1px solid #9bdcff80;background:linear-gradient(180deg,#0b3965 0%,#092d52 55%,#071f3d 100%);box-shadow:0 22px 55px #00152eaa,inset 0 2px 12px #a7e1ff20;touch-action:none}
+.arena:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,#66c8ff20,transparent 60%),linear-gradient(90deg,#061b3520,transparent 15%,transparent 85%,#061b3520)}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.under{display:flex;justify-content:space-between;align-items:center;padding:11px 5px 0;color:#b1d3ed;font-size:12px;min-height:32px}
+#chain{font-size:14px;color:#fff;font-weight:750;text-shadow:0 0 10px #83d9ff}
+@media(max-width:390px){body{padding:8px 7px}.arena{height:70vh;min-height:430px;border-radius:26px}.top{margin-bottom:8px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
 </head>
 <body>
 <main>
-  <div class="top">
-    <div class="scorebox"><small>SCORE</small><strong id="score">0</strong><span id="best">BEST 0</span></div>
-    <button id="reset" type="button" aria-label="リセット" title="最初から">↻</button>
-  </div>
-  <div class="frame"><div id="board"><svg id="trail" aria-hidden="true"><path id="trailPath"></path></svg></div></div>
-  <div class="under"><span id="chain"></span><span>BLUE ORBS</span></div>
+ <div class="top"><div class="scorebox"><small>SCORE</small><strong id="score">0</strong><span id="best">BEST 0</span></div><button id="reset" type="button" aria-label="リセット" title="最初から">↻</button></div>
+ <div class="arena"><canvas id="game"></canvas></div>
+ <div class="under"><span id="chain"></span><span>COLOR DROP</span></div>
 </main>
 <script>
 (() => {
 "use strict";
-const COLS=8,ROWS=9,COLORS=5;
-const boardEl=document.getElementById("board"),scoreEl=document.getElementById("score"),bestEl=document.getElementById("best"),chainEl=document.getElementById("chain"),trail=document.getElementById("trail"),trailPath=document.getElementById("trailPath");
-let board=[],score=0,best=0,path=[],active=false,busy=false,pointerId=null;
-const idx=(r,c)=>r*COLS+c,rc=i=>[Math.floor(i/COLS),i%COLS],randomColor=()=>Math.floor(Math.random()*COLORS);
-function adjacent(a,b){const [ar,ac]=rc(a),[br,bc]=rc(b);return Math.max(Math.abs(ar-br),Math.abs(ac-bc))===1}
-function render(fresh=new Set()){
-  boardEl.querySelectorAll(".cell").forEach(el=>el.remove());
-  board.forEach((color,i)=>{
-    const cell=document.createElement("div");cell.className="cell";cell.dataset.index=i;
-    if(color!==null){const orb=document.createElement("div");orb.className="orb c"+color+(path.includes(i)?" selected":"")+(fresh.has(i)?" fresh":"");orb.dataset.index=i;cell.appendChild(orb)}
-    boardEl.insertBefore(cell,trail);
-  });
-  scoreEl.textContent=score.toLocaleString("ja-JP");bestEl.textContent="BEST "+best;
-  chainEl.textContent=active&&path.length>1?path.length+" CHAIN":"";
-  drawTrail();
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),arena=canvas.parentElement;
+const scoreEl=document.getElementById("score"),bestEl=document.getElementById("best"),chainEl=document.getElementById("chain");
+const colors=["#ff647d","#ffd34e","#56d99a","#aa86ff","#ff9852"];
+let W=0,H=0,D=1,R=23,balls=[],chain=[],active=false,pointer=null,score=0,best=0,last=0,raf=0,clearing=false;
+const randColor=()=>Math.floor(Math.random()*colors.length);
+const rand=(a,b)=>a+Math.random()*(b-a);
+function resize(){
+ const rect=arena.getBoundingClientRect();D=Math.min(devicePixelRatio||1,2);W=rect.width;H=rect.height;
+ canvas.width=Math.round(W*D);canvas.height=Math.round(H*D);ctx.setTransform(D,0,0,D,0,0);
+ R=Math.max(16,Math.min(25,W/17.5));
+ if(!balls.length)seed();else{for(const b of balls){b.x=Math.max(R,Math.min(W-R,b.x));b.y=Math.max(R,Math.min(H-R,b.y))}}
 }
-function center(i){const el=boardEl.querySelector('.cell[data-index="'+i+'"]');if(!el)return null;const a=el.getBoundingClientRect(),b=boardEl.getBoundingClientRect();return{x:a.left+a.width/2-b.left,y:a.top+a.height/2-b.top}}
-function drawTrail(){
-  if(path.length<2){trailPath.setAttribute("d","");return}
-  const pts=path.map(center).filter(Boolean);if(pts.length<2)return;
-  let d="M "+pts[0].x+" "+pts[0].y;
-  for(let i=1;i<pts.length;i++){const prev=pts[i-1],cur=pts[i],mx=(prev.x+cur.x)/2,my=(prev.y+cur.y)/2;d+=" Q "+prev.x+" "+prev.y+" "+mx+" "+my}
-  const last=pts[pts.length-1];d+=" T "+last.x+" "+last.y;
-  trailPath.setAttribute("d",d);
+function makeBall(x,y,color=randColor(),vy=0){return{x,y,vx:rand(-.35,.35),vy,r:R*rand(.94,1.04),color,spin:rand(0,Math.PI*2),born:0,dead:false}}
+function seed(){
+ balls=[];const spacing=R*2.02;
+ for(let row=0;row<Math.ceil((H-R*2)/spacing);row++){
+  const offset=row%2?R:0;
+  for(let x=R+offset;x<W-R;x+=spacing){balls.push(makeBall(x+rand(-1.8,1.8),R+row*spacing,randColor(),rand(-.2,.3)))}
+ }
 }
-function pick(x,y){
-  const rect=boardEl.getBoundingClientRect(),cell=boardEl.querySelector(".cell");if(!cell)return -1;
-  const size=cell.getBoundingClientRect().width,gap=parseFloat(getComputedStyle(boardEl).gap)||0,step=size+gap;
-  const c=Math.max(0,Math.min(COLS-1,Math.floor((x-rect.left)/step)));
-  const r=Math.max(0,Math.min(ROWS-1,Math.floor((y-rect.top)/step)));
-  const i=idx(r,c),p=center(i);if(!p)return -1;
-  const dist=Math.hypot(x-rect.left-p.x,y-rect.top-p.y);
-  return dist<=size*.78?i:-1;
+function addBall(){balls.push(makeBall(rand(R,W-R),-R*2,randColor(),rand(0,1)))}
+function scoreUI(){scoreEl.textContent=score.toLocaleString("ja-JP");bestEl.textContent="BEST "+best}
+function nearest(x,y,maxDist=R*1.45,exclude=new Set()){
+ let found=null,dist=maxDist;
+ for(const b of balls){if(b.dead||exclude.has(b))continue;const d=Math.hypot(b.x-x,b.y-y);if(d<dist){dist=d;found=b}}
+ return found;
 }
-function addIndex(i){
-  if(i<0||board[i]===null||!path.length)return;
-  const last=path[path.length-1];if(i===last)return;
-  if(path.length>1&&i===path[path.length-2]){path.pop();render();return}
-  if(path.includes(i)||board[i]!==board[path[0]]||!adjacent(last,i))return;
-  path.push(i);render();
+function start(e){
+ if(clearing)return;const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
+ const b=nearest(x,y,R*1.35);if(!b)return;
+ e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer=e.pointerId;active=true;chain=[b];chainEl.textContent="1 CHAIN";draw();
 }
-function traceTo(i){
-  if(i<0||!path.length)return;
-  const last=path[path.length-1];if(i===last)return;
-  const [r0,c0]=rc(last),[r1,c1]=rc(i),steps=Math.max(Math.abs(r1-r0),Math.abs(c1-c0));
-  if(steps===0)return;
-  // Fill in cells crossed between pointer samples so quick swipes don't skip over orbs.
-  for(let s=1;s<=steps;s++){
-    const r=Math.round(r0+(r1-r0)*s/steps),c=Math.round(c0+(c1-c0)*s/steps);
-    addIndex(idx(r,c));
-  }
+function move(e){
+ if(!active||e.pointerId!==pointer)return;
+ const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
+ const lastBall=chain[chain.length-1];if(!lastBall)return;
+ const already=new Set(chain);
+ // Pick the next matching orb that the finger passes over and that touches the current chain end.
+ const candidates=balls.filter(b=>!b.dead&&!already.has(b)&&b.color===chain[0].color&&Math.hypot(b.x-lastBall.x,b.y-lastBall.y)<lastBall.r+b.r+R*.38);
+ let chosen=null,bestD=R*1.5;
+ for(const b of candidates){const d=Math.hypot(b.x-x,b.y-y);if(d<bestD){bestD=d;chosen=b}}
+ if(chosen){chain.push(chosen);chainEl.textContent=chain.length+" CHAIN";draw()}
 }
-function pointIndex(e){const rect=boardEl.getBoundingClientRect();return pick(e.clientX,e.clientY)}
-boardEl.addEventListener("pointerdown",e=>{
-  if(busy)return;const i=pointIndex(e);if(i<0||board[i]===null)return;
-  e.preventDefault();pointerId=e.pointerId;boardEl.setPointerCapture(pointerId);path=[i];active=true;render();
-});
-boardEl.addEventListener("pointermove",e=>{
-  if(!active||e.pointerId!==pointerId)return;e.preventDefault();traceTo(pointIndex(e));
-});
-boardEl.addEventListener("pointerup",e=>{if(!active||e.pointerId!==pointerId)return;pointerId=null;finish()});
-boardEl.addEventListener("pointercancel",()=>{active=false;path=[];pointerId=null;render()});
-const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function finish(){
-  active=false;const chosen=path.slice();
-  if(chosen.length<3){path=[];render();return}
-  busy=true;best=Math.max(best,chosen.length);score+=chosen.length*chosen.length*10;
-  chosen.forEach(i=>{const el=boardEl.querySelector('.orb[data-index="'+i+'"]');if(el)el.classList.add("popping")});
-  scoreEl.textContent=score.toLocaleString("ja-JP");bestEl.textContent="BEST "+best;chainEl.textContent=chosen.length+" CHAIN";
-  await wait(190);
-  chosen.forEach(i=>board[i]=null);path=[];
-  const fresh=new Set();
-  for(let c=0;c<COLS;c++){
-    const remaining=[];for(let r=ROWS-1;r>=0;r--){const v=board[idx(r,c)];if(v!==null)remaining.push(v)}
-    for(let r=ROWS-1;r>=0;r--){const target=idx(r,c),v=remaining[ROWS-1-r];if(v===undefined){board[target]=randomColor();fresh.add(target)}else board[target]=v}
-  }
-  render(fresh);await wait(390);busy=false;chainEl.textContent="";
+function end(){if(!active)return;active=false;pointer=null;if(chain.length>=3)clearChain();else{chain=[];chainEl.textContent="";draw()}}
+canvas.addEventListener("pointerdown",start);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",end);
+canvas.addEventListener("pointercancel",()=>{active=false;pointer=null;chain=[];chainEl.textContent="";draw()});
+function clearChain(){
+ clearing=true;const removed=chain.slice();const n=removed.length;score+=n*n*10;best=Math.max(best,n);scoreUI();chainEl.textContent=n+" CHAIN";
+ for(const b of removed)b.dead=true;chain=[];
+ setTimeout(()=>{balls=balls.filter(b=>!b.dead);for(let i=0;i<n;i++)addBall();clearing=false;chainEl.textContent="";},160);
 }
-function reset(){board=Array.from({length:ROWS*COLS},randomColor);score=0;best=0;path=[];active=false;busy=false;pointerId=null;render(new Set(board.map((_,i)=>i)))}
-document.getElementById("reset").addEventListener("click",()=>{if(!busy)reset()});
-window.addEventListener("resize",()=>{if(path.length>1)drawTrail()});
-reset();
+function physics(dt){
+ const step=Math.min(dt,24)/16.6667,g=.31*step;
+ for(const b of balls){
+  b.vy+=g;b.vx*=.999;b.vy*=.999;b.x+=b.vx*step;b.y+=b.vy*step;
+  if(b.x<b.r){b.x=b.r;b.vx=Math.abs(b.vx)*.72}
+  if(b.x>W-b.r){b.x=W-b.r;b.vx=-Math.abs(b.vx)*.72}
+  if(b.y<b.r){b.y=b.r;b.vy=Math.abs(b.vy)*.48}
+  if(b.y>H-b.r){b.y=H-b.r;b.vy=-Math.abs(b.vy)*.28;if(Math.abs(b.vy)<.55)b.vy=0}
+ }
+ // Circle-to-circle collisions; a small positional correction keeps the pile stable.
+ for(let pass=0;pass<2;pass++)for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
+  const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy),min=a.r+b.r;
+  if(dist>=min||dist===0)continue;
+  const nx=dx/dist,ny=dy/dist,overlap=min-dist;
+  a.x-=nx*overlap*.5;a.y-=ny*overlap*.5;b.x+=nx*overlap*.5;b.y+=ny*overlap*.5;
+  const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+  if(rel<0){const impulse=-(1.22)*rel*.5;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny}
+ }
+}
+function drawBall(b){
+ const grad=ctx.createRadialGradient(b.x-b.r*.36,b.y-b.r*.43,b.r*.06,b.x,b.y,b.r*1.12);
+ grad.addColorStop(0,"#ffffff");grad.addColorStop(.12,colors[b.color]);grad.addColorStop(.68,colors[b.color]);grad.addColorStop(1,"#152b53");
+ ctx.save();ctx.shadowColor=colors[b.color];ctx.shadowBlur=7;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();ctx.shadowBlur=0;
+ ctx.lineWidth=1;ctx.strokeStyle="#ffffff70";ctx.stroke();
+ ctx.beginPath();ctx.ellipse(b.x-b.r*.23,b.y-b.r*.43,b.r*.38,b.r*.17,-.48,0,Math.PI*2);ctx.fillStyle="#ffffff9c";ctx.fill();
+ ctx.beginPath();ctx.ellipse(b.x+b.r*.34,b.y+b.r*.42,b.r*.15,b.r*.09,-.5,0,Math.PI*2);ctx.fillStyle="#ffffff50";ctx.fill();
+ ctx.restore();
+}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ // Subtle arena lighting
+ const light=ctx.createRadialGradient(W*.5,0,5,W*.5,H*.35,H*.85);light.addColorStop(0,"#65bfff12");light.addColorStop(1,"#00152a00");ctx.fillStyle=light;ctx.fillRect(0,0,W,H);
+ for(const b of balls)drawBall(b);
+ if(chain.length){
+  ctx.save();ctx.beginPath();chain.forEach((b,i)=>i?ctx.lineTo(b.x,b.y):ctx.moveTo(b.x,b.y));ctx.lineWidth=R*.2;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#ffffffd9";ctx.shadowColor="#8be2ff";ctx.shadowBlur=15;ctx.stroke();
+  for(const b of chain){ctx.beginPath();ctx.arc(b.x,b.y,b.r+2,0,Math.PI*2);ctx.strokeStyle="#ffffff";ctx.lineWidth=2.5;ctx.stroke()}
+  ctx.restore();
+ }
+}
+function loop(t){const dt=last?t-last:16.67;last=t;physics(dt);draw();raf=requestAnimationFrame(loop)}
+function reset(){score=0;best=0;chain=[];active=false;pointer=null;clearing=false;seed();scoreUI();chainEl.textContent=""}
+document.getElementById("reset").addEventListener("click",reset);
+new ResizeObserver(resize).observe(arena);resize();scoreUI();raf=requestAnimationFrame(loop);
 })();
 </script>
 </body>
