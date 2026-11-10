@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#17152b">
+  <title>まるつなぎパズル</title>
+  <style>
+    :root { color-scheme: dark; --bg:#111020; --panel:#201e38; --ink:#f7f4ff; --muted:#aaa6c5; --accent:#a98cff; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; padding:24px 14px 36px; color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:radial-gradient(ellipse at 50% 0%,#30264d 0%,#17152b 48%,#10101d 100%); display:flex; justify-content:center; }
+    main { width:min(100%,560px); }
+    header { text-align:center; margin:4px 0 18px; }
+    h1 { margin:0; font-size:clamp(25px,6vw,36px); letter-spacing:.06em; }
+    .subtitle { color:var(--muted); font-size:13px; margin-top:6px; }
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+    .stat { background:rgba(35,32,61,.92); border:1px solid #3c365d; border-radius:15px; padding:10px 14px; text-align:center; }
+    .stat small { display:block; color:var(--muted); font-size:12px; }
+    .stat strong { display:block; font-size:25px; font-variant-numeric:tabular-nums; margin-top:1px; }
+    .board-wrap { padding:10px; border-radius:19px; background:linear-gradient(145deg,#393052,#211e38); border:1px solid #51466f; box-shadow:0 18px 45px #0007,inset 0 1px #ffffff20; touch-action:none; user-select:none; }
+    #board { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:5px; }
+    .cell { aspect-ratio:1; min-width:0; display:grid; place-items:center; border-radius:50%; background:#171529; position:relative; }
+    .orb { width:88%; height:88%; border-radius:50%; border:2px solid #ffffff38; box-shadow:inset -5px -7px 10px #0004,inset 4px 4px 7px #ffffff45,0 3px 5px #0006; transition:transform .08s,filter .08s; position:relative; }
+    .orb::after { content:""; position:absolute; width:29%; height:18%; top:15%; left:20%; border-radius:50%; background:#ffffff8c; filter:blur(1px); transform:rotate(-35deg); }
+    .orb.selected { transform:scale(.83); filter:brightness(1.35); outline:3px solid #fff; outline-offset:1px; }
+    .orb.popping { transform:scale(.15); opacity:0; transition:transform .16s,opacity .16s; }
+    .c0 { background:radial-gradient(circle at 32% 25%,#ffb3c7,#f04478 58%,#a91d55); }
+    .c1 { background:radial-gradient(circle at 32% 25%,#ffe59a,#ffb52f 58%,#bd6818); }
+    .c2 { background:radial-gradient(circle at 32% 25%,#a9f4ff,#28bde0 58%,#16739d); }
+    .c3 { background:radial-gradient(circle at 32% 25%,#d9b6ff,#9860e8 58%,#5730a2); }
+    .c4 { background:radial-gradient(circle at 32% 25%,#b7f6ae,#58c96b 58%,#258044); }
+    .controls { display:flex; justify-content:center; gap:10px; margin:14px 0 10px; }
+    button { border:0; border-radius:999px; padding:11px 22px; color:#201936; background:linear-gradient(180deg,#d4c3ff,#a98cff); font:700 14px system-ui,sans-serif; box-shadow:0 4px 0 #7056b4; cursor:pointer; }
+    button:active { transform:translateY(2px); box-shadow:0 2px 0 #7056b4; }
+    button:focus-visible { outline:3px solid white; outline-offset:3px; }
+    #message { min-height:24px; text-align:center; color:#d8d2f2; font-size:13px; margin:8px 0; }
+    .rules { color:var(--muted); background:#1b1930cc; border:1px solid #34304e; border-radius:14px; padding:12px 15px; font-size:12px; line-height:1.7; margin-top:12px; }
+    .legend { display:flex; justify-content:center; gap:13px; margin-top:12px; flex-wrap:wrap; }
+    .legend span { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:11px; }
+    .dot { width:11px; height:11px; border-radius:50%; display:inline-block; }
+    @media (max-width:390px) { body{padding:16px 8px 26px} .board-wrap{padding:7px} #board{gap:3px} .stat strong{font-size:22px} }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>まるつなぎパズル</h1>
+    <div class="subtitle">同じ色の玉をつないで消そう</div>
+  </header>
+  <section class="stats" aria-label="スコア">
+    <div class="stat"><small>スコア</small><strong id="score">0</strong></div>
+    <div class="stat"><small>今回つないだ最大数</small><strong id="best">0</strong></div>
+  </section>
+  <div class="board-wrap">
+    <div id="board" role="application" aria-label="パズル盤面"></div>
+  </div>
+  <div class="legend" aria-label="玉の色">
+    <span><i class="dot c0"></i>ピンク</span><span><i class="dot c1"></i>オレンジ</span><span><i class="dot c2"></i>水色</span><span><i class="dot c3"></i>むらさき</span><span><i class="dot c4"></i>みどり</span>
+  </div>
+  <div class="controls"><button id="reset" type="button">最初から</button></div>
+  <div id="message" aria-live="polite">同じ色の玉を3個以上、指やマウスでなぞってください。</div>
+  <div class="rules">・上下左右と斜めに隣り合う同じ色の玉をつなげられます。<br>・3個以上つないで指を離すと消えます。<br>・上の玉が落ちて、新しい玉が上から補充されます。<br>・時間制限やスキルはありません。</div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const COLS = 8, ROWS = 9, COLORS = 5;
+  const boardEl = document.getElementById("board");
+  const scoreEl = document.getElementById("score");
+  const bestEl = document.getElementById("best");
+  const messageEl = document.getElementById("message");
+  let board = [], score = 0, best = 0, path = [], active = false, busy = false, pointerId = null;
+
+  const randomColor = () => Math.floor(Math.random() * COLORS);
+  const indexOf = (r,c) => r * COLS + c;
+  const neighbors = (idx) => {
+    const r = Math.floor(idx / COLS), c = idx % COLS, out = [];
+    for (let dr=-1; dr<=1; dr++) for (let dc=-1; dc<=1; dc++) {
+      if (!dr && !dc) continue;
+      const nr=r+dr, nc=c+dc;
+      if (nr>=0 && nr<ROWS && nc>=0 && nc<COLS) out.push(indexOf(nr,nc));
+    }
+    return out;
+  };
+  function render() {
+    boardEl.innerHTML = "";
+    board.forEach((color, idx) => {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.index = String(idx);
+      if (color !== null) {
+        const orb = document.createElement("div");
+        orb.className = "orb c" + color + (path.includes(idx) ? " selected" : "");
+        orb.dataset.index = String(idx);
+        cell.appendChild(orb);
+      }
+      boardEl.appendChild(cell);
+    });
+    scoreEl.textContent = score.toLocaleString("ja-JP");
+    bestEl.textContent = String(best);
+  }
+  function startPath(idx) {
+    if (busy || board[idx] === null || board[idx] === undefined) return;
+    path = [idx]; active = true; render();
+  }
+  function extendPath(idx) {
+    if (!active || busy || idx === path[path.length-1]) return;
+    const color = board[path[0]];
+    if (board[idx] !== color) return;
+    const previous = path.indexOf(idx);
+    if (previous !== -1) {
+      if (previous === path.length - 2) { path.pop(); render(); }
+      return;
+    }
+    if (neighbors(path[path.length-1]).includes(idx)) { path.push(idx); render(); }
+  }
+  function cellFromPoint(x,y) {
+    const el = document.elementFromPoint(x,y);
+    const cell = el && el.closest(".cell");
+    return cell ? Number(cell.dataset.index) : -1;
+  }
+  boardEl.addEventListener("pointerdown", (event) => {
+    if (busy) return;
+    const idx = cellFromPoint(event.clientX,event.clientY);
+    if (idx < 0) return;
+    event.preventDefault();
+    pointerId = event.pointerId;
+    boardEl.setPointerCapture(pointerId);
+    startPath(idx);
+  });
+  boardEl.addEventListener("pointermove", (event) => {
+    if (!active || event.pointerId !== pointerId) return;
+    event.preventDefault();
+    const idx = cellFromPoint(event.clientX,event.clientY);
+    if (idx >= 0) extendPath(idx);
+  });
+  boardEl.addEventListener("pointerup", async (event) => {
+    if (!active || event.pointerId !== pointerId) return;
+    pointerId = null;
+    await finishPath();
+  });
+  boardEl.addEventListener("pointercancel", () => { if(active) { active=false; path=[]; render(); } pointerId=null; });
+  const sleep = ms => new Promise(resolve => setTimeout(resolve,ms));
+  async function finishPath() {
+    active = false;
+    const chosen = path.slice();
+    if (chosen.length < 3) {
+      path = []; render();
+      messageEl.textContent = "3個以上つなぐと消せます。";
+      return;
+    }
+    busy = true;
+    best = Math.max(best, chosen.length);
+    score += chosen.length * chosen.length * 10;
+    chosen.forEach(idx => {
+      const orb = boardEl.querySelector('.orb[data-index="' + idx + '"]');
+      if (orb) orb.classList.add("popping");
+    });
+    scoreEl.textContent = score.toLocaleString("ja-JP");
+    bestEl.textContent = String(best);
+    messageEl.textContent = chosen.length + "個消去！";
+    await sleep(170);
+    chosen.forEach(idx => board[idx] = null);
+    path = [];
+    for (let c=0; c<COLS; c++) {
+      const remaining = [];
+      for (let r=ROWS-1; r>=0; r--) {
+        const value = board[indexOf(r,c)];
+        if (value !== null) remaining.push(value);
+      }
+      for (let r=ROWS-1; r>=0; r--) {
+        board[indexOf(r,c)] = remaining[ROWS-1-r] ?? randomColor();
+      }
+    }
+    render();
+    await sleep(120);
+    busy = false;
+    messageEl.textContent = "次の玉をつないでください。";
+  }
+  function reset() {
+    board = Array.from({length:ROWS*COLS}, randomColor);
+    score = 0; best = 0; path = []; active = false; busy = false; pointerId = null;
+    render();
+    messageEl.textContent = "同じ色の玉を3個以上、指やマウスでなぞってください。";
+  }
+  document.getElementById("reset").addEventListener("click", () => { if (!busy) reset(); });
+  reset();
+})();
+</script>
+</body>
+</html>
