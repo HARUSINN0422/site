@@ -18,13 +18,12 @@ main{width:min(100%,520px)}
 #best{font-size:12px;color:#c1dff5;margin-left:5px}
 button{width:42px;height:42px;border:1px solid #a8dcff70;border-radius:50%;background:linear-gradient(145deg,#2875aa,#10436f);color:#effaff;font-size:21px;box-shadow:0 4px 14px #001a35aa;cursor:pointer}
 button:active{transform:scale(.93)}
-.arena{position:relative;width:min(100%,min(72vh,520px));aspect-ratio:1;height:auto;min-height:0;margin:0 auto;border-radius:50%;overflow:hidden;border:1px solid #9bdcff80;background:linear-gradient(180deg,#0b3965 0%,#092d52 55%,#071f3d 100%);box-shadow:0 22px 55px #00152eaa,inset 0 2px 12px #a7e1ff20;touch-action:none}
+.arena{position:relative;width:min(100%,min(72vh,520px));aspect-ratio:1;margin:0 auto;border-radius:50%;overflow:hidden;border:1px solid #9bdcff80;background:linear-gradient(180deg,#0b3965 0%,#092d52 55%,#071f3d 100%);box-shadow:0 22px 55px #00152eaa,inset 0 2px 12px #a7e1ff20;touch-action:none}
 .arena:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,#66c8ff20,transparent 60%),linear-gradient(90deg,#061b3520,transparent 15%,transparent 85%,#061b3520)}
 canvas{display:block;width:100%;height:100%;touch-action:none}
 .under{display:flex;justify-content:space-between;align-items:center;padding:11px 5px 0;color:#b1d3ed;font-size:12px;min-height:32px}
 #chain{font-size:14px;color:#fff;font-weight:750;text-shadow:0 0 10px #83d9ff}
 @media(max-width:390px){body{padding:8px 7px}.arena{width:min(100%,70vh)}.top{margin-bottom:8px}}
-@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -39,172 +38,111 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),arena=canvas.parentElement;
 const scoreEl=document.getElementById("score"),bestEl=document.getElementById("best"),chainEl=document.getElementById("chain");
 const colors=["#ff647d","#ffd34e","#56d99a","#aa86ff","#ff9852"];
-let W=0,H=0,D=1,R=23,balls=[],chain=[],active=false,pointer=null,score=0,best=0,last=0,raf=0,clearing=false;
+let W=0,H=0,D=1,R=23,balls=[],chain=[],active=false,pointer=null,score=0,best=0,last=0,clearing=false,accumulator=0;
 const randColor=()=>Math.floor(Math.random()*colors.length);
 const rand=(a,b)=>a+Math.random()*(b-a);
-function cx(){return W/2}function cy(){return H/2}function bowlRadius(){return Math.min(W,H)*.485}
+const cx=()=>W/2,cy=()=>H/2,bowlRadius=()=>Math.min(W,H)*.485;
+function makeBall(x,y,color=randColor(),vy=0){return{x,y,vx:rand(-8,8),vy,r:R*.94,color,sleep:false,sleepTime:0,dead:false};}
 function resize(){
  const rect=arena.getBoundingClientRect();D=Math.min(devicePixelRatio||1,2);W=rect.width;H=rect.height;
  canvas.width=Math.round(W*D);canvas.height=Math.round(H*D);ctx.setTransform(D,0,0,D,0,0);
  R=Math.max(13,Math.min(24,W/18));
- if(!balls.length)seed();else{const br=bowlRadius();for(const b of balls){const dx=b.x-cx(),dy=b.y-cy(),d=Math.hypot(dx,dy),limit=br-b.r;if(d>limit&&d>0){b.x=cx()+dx/d*limit;b.y=cy()+dy/d*limit}}}
+ if(!balls.length)seed();
+ else for(const b of balls)confine(b);
 }
-function makeBall(x,y,color=randColor(),vy=0){return{x,y,vx:0,vy,r:R*.95,color,spin:rand(0,Math.PI*2),born:0,dead:false,sleep:false,sleepTime:0}}}
 function seed(){
- balls=[];const spacing=R*2,rowStep=R*1.74,br=bowlRadius();let row=0;
- for(let y=cy()-br+R*.98;y<=cy()+br-R*.98;y+=rowStep,row++){
-  const half=Math.sqrt(Math.max(0,(br-R*.98)**2-(y-cy())**2));
-  const offset=row%2?R:0;
-  for(let k=-Math.ceil(half/spacing)-1;k<=Math.ceil(half/spacing)+1;k++){
-   const x=cx()+k*spacing+offset;
-   if(Math.abs(x-cx())<=half)balls.push(makeBall(x,y,randColor(),0));
-  }
+ balls=[];const spacing=R*1.98,rowStep=R*1.72,br=bowlRadius(),inner=br-R*.98;let row=0;
+ for(let y=cy()-inner;y<=cy()+inner;y+=rowStep,row++){
+  const half=Math.sqrt(Math.max(0,inner*inner-(y-cy())**2)),offset=row%2?R:0;
+  for(let x=cx()-half+offset;x<=cx()+half;x+=spacing)balls.push(makeBall(x,y,randColor(),0));
  }
+ // Start in a settled state without initial jitter.
+ for(const b of balls){b.vx=0;b.vy=0;b.sleep=true;}
 }
+function confine(b){
+ const dx=b.x-cx(),dy=b.y-cy(),dist=Math.hypot(dx,dy),limit=bowlRadius()-b.r-1;
+ if(dist>limit&&dist>0){const nx=dx/dist,ny=dy/dist;b.x=cx()+nx*limit;b.y=cy()+ny*limit;}
 }
 function addBall(){
- // Balls enter from above through a narrow opening at the top of the bowl.
- balls.push(makeBall(cx()+rand(-R*.35,R*.35),-R*2.2,randColor(),0));
+ // Spawn just above the visible rim; gravity carries it through the top entrance.
+ balls.push(makeBall(cx()+rand(-R*.22,R*.22),cy()-bowlRadius()-R*1.25,randColor(),0));
 }
-   if(!balls.length)clearance=0;
-   if(clearance>bestClearance){bestClearance=clearance;bestX=x;bestY=y;}
-  }
- }
- balls.push(makeBall(bestX,bestY,randColor(),0));
-}
- balls.push(makeBall(bestX,y,randColor(),0));
+function scoreUI(){scoreEl.textContent=score.toLocaleString("ja-JP");bestEl.textContent="BEST "+best;}
+function nearest(x,y,maxDist,exclude=new Set()){
+ let found=null,dist=maxDist;
+ for(const b of balls){if(b.dead||exclude.has(b))continue;const d=Math.hypot(b.x-x,b.y-y);if(d<dist){dist=d;found=b;}}
+ return found;
 }
 function start(e){
- if(clearing)return;const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
- const b=nearest(x,y,R*1.35);if(!b)return;
- e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer=e.pointerId;active=true;chain=[b];chainEl.textContent="1 CHAIN";draw();
+ if(clearing)return;const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,b=nearest(x,y,R*1.35);
+ if(!b)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer=e.pointerId;active=true;chain=[b];chainEl.textContent="1 CHAIN";draw();
 }
 function move(e){
  if(!active||e.pointerId!==pointer)return;
- const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
- const lastBall=chain[chain.length-1];if(!lastBall)return;
- const already=new Set(chain);
- // Pick the next matching orb that the finger passes over and that touches the current chain end.
- const candidates=balls.filter(b=>!b.dead&&!already.has(b)&&b.color===chain[0].color&&Math.hypot(b.x-lastBall.x,b.y-lastBall.y)<lastBall.r+b.r+R*.38);
- let chosen=null,bestD=R*1.5;
- for(const b of candidates){const d=Math.hypot(b.x-x,b.y-y);if(d<bestD){bestD=d;chosen=b}}
- if(chosen){chain.push(chosen);chainEl.textContent=chain.length+" CHAIN";draw()}
+ const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,lastBall=chain[chain.length-1];
+ if(!lastBall)return;const used=new Set(chain);
+ const candidates=balls.filter(b=>!b.dead&&!used.has(b)&&b.color===chain[0].color&&Math.hypot(b.x-lastBall.x,b.y-lastBall.y)<lastBall.r+b.r+R*.38);
+ let chosen=null,bestD=R*1.5;for(const b of candidates){const d=Math.hypot(b.x-x,b.y-y);if(d<bestD){bestD=d;chosen=b;}}
+ if(chosen){chain.push(chosen);chainEl.textContent=chain.length+" CHAIN";draw();}
 }
-function end(){if(!active)return;active=false;pointer=null;if(chain.length>=3)clearChain();else{chain=[];chainEl.textContent="";draw()}}
+function end(){
+ if(!active)return;active=false;pointer=null;
+ if(chain.length>=3)clearChain();else{chain=[];chainEl.textContent="";draw();}
+}
 canvas.addEventListener("pointerdown",start);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",end);
-canvas.addEventListener("pointercancel",()=>{active=false;pointer=null;chain=[];chainEl.textContent="";draw()});
+canvas.addEventListener("pointercancel",()=>{active=false;pointer=null;chain=[];chainEl.textContent="";draw();});
 function clearChain(){
- clearing=true;const removed=chain.slice();const n=removed.length;score+=n*n*10;best=Math.max(best,n);scoreUI();chainEl.textContent=n+" CHAIN";
+ clearing=true;const removed=chain.slice(),n=removed.length;score+=n*n*10;best=Math.max(best,n);scoreUI();chainEl.textContent=n+" CHAIN";
  for(const b of removed)b.dead=true;chain=[];
  setTimeout(()=>{balls=balls.filter(b=>!b.dead);for(let i=0;i<n;i++)addBall();clearing=false;chainEl.textContent="";},160);
 }
-function physics(dt){
- const step=dt,gravity=1450,br=bowlRadius(),wallLimit=b=>br-b.r-1.2;
+function solvePhysics(dt){
+ const gravity=1350,br=bowlRadius(),entranceHalf=R*1.45;
  for(const b of balls){
   if(b.sleep)continue;
-  b.vy+=gravity*step;
-  b.vx*=Math.exp(-1.7*step);b.vy*=Math.exp(-.32*step);
-  b.x+=b.vx*step;b.y+=b.vy*step;
+  b.vy+=gravity*dt;b.vx*=Math.exp(-1.3*dt);b.vy*=Math.exp(-.18*dt);
+  b.x+=b.vx*dt;b.y+=b.vy*dt;
  }
- // A small top entrance is open only for balls moving downward into the bowl.
- for(let pass=0;pass<10;pass++){
+ // Circle wall with a narrow top-only entrance. Once a ball has crossed the rim, the wall closes behind it.
+ for(let pass=0;pass<8;pass++){
   for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
-   const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y;
-   let dist=Math.hypot(dx,dy);const min=a.r+b.r;
+   const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy),min=a.r+b.r;
    if(dist>=min)continue;
-   if(dist<.0001)dist=.0001;
-   const nx=dx/dist,ny=dy/dist,overlap=min-dist;
-   const correction=Math.max(0,overlap-.005)*.52;
-   a.x-=nx*correction;a.y-=ny*correction;
-   b.x+=nx*correction;b.y+=ny*correction;
-   if(overlap>.05){if(!a.sleep){a.sleepTime=0;}if(!b.sleep){b.sleepTime=0;}}
-   const rvx=(b.sleep?0:b.vx)-(a.sleep?0:a.vx);
-   const rvy=(b.sleep?0:b.vy)-(a.sleep?0:a.vy);
-   const along=rvx*nx+rvy*ny;
-   if(along<0){
-    const impulse=-1.025*along*.5;
-    if(!a.sleep){a.vx-=impulse*nx;a.vy-=impulse*ny;}
-    if(!b.sleep){b.vx+=impulse*nx;b.vy+=impulse*ny;}
-    if(Math.abs(along)>8){a.sleep=false;b.sleep=false;a.sleepTime=0;b.sleepTime=0;}
+   const d=Math.max(dist,.001),nx=dx/d,ny=dy/d,overlap=min-d;
+   const ia=a.sleep?0:1,ib=b.sleep?0:1,total=ia+ib;
+   if(total){const correction=Math.max(0,overlap-.001)*.52;
+    a.x-=nx*correction*ia/total;a.y-=ny*correction*ia/total;
+    b.x+=nx*correction*ib/total;b.y+=ny*correction*ib/total;
+   }
+   const rvx=(b.sleep?0:b.vx)-(a.sleep?0:a.vx),rvy=(b.sleep?0:b.vy)-(a.sleep?0:a.vy),along=rvx*nx+rvy*ny;
+   if(along<0&&total){
+    const impulse=-(1.02)*along/total;
+    if(!a.sleep){a.vx-=impulse*nx;a.vy-=impulse*ny;a.sleepTime=0;}
+    if(!b.sleep){b.vx+=impulse*nx;b.vy+=impulse*ny;b.sleepTime=0;}
+    if(Math.abs(along)>7){a.sleep=false;b.sleep=false;}
    }
   }
   for(const b of balls){
-   const dx=b.x-cx(),dy=b.y-cy(),dist=Math.hypot(dx,dy),limit=wallLimit(b);
-   if(dist>limit){
-    const nx=dx/(dist||1),ny=dy/(dist||1);
-    const nearTop=Math.abs(dx)<br*.38 && dy<0;
-    const entering=nearTop && b.vy>0;
-    if(entering)continue;
-    b.x=cx()+nx*limit;b.y=cy()+ny*limit;
+   const dx=b.x-cx(),dy=b.y-cy(),dist=Math.hypot(dx,dy),limit=br-b.r-1;
+   // Only a ball still completely above the rim may enter through the narrow top gap.
+   const entering=dy<0&&Math.abs(dx)<entranceHalf&&b.y < cy()-br+b.r*1.35&&b.vy>=0;
+   if(dist>limit&&!entering){
+    const nx=dx/(dist||1),ny=dy/(dist||1);b.x=cx()+nx*limit;b.y=cy()+ny*limit;
     const outward=(b.sleep?0:b.vx)*nx+(b.sleep?0:b.vy)*ny;
-    if(outward>0){
-     b.vx-=1.03*outward*nx;b.vy-=1.03*outward*ny;
-     b.vx*=.985;b.vy*=.985;
-    }
+    if(outward>0){b.vx-=1.04*outward*nx;b.vy-=1.04*outward*ny;}
    }
   }
  }
  for(const b of balls){
   if(b.sleep)continue;
   const speed=Math.hypot(b.vx,b.vy);
-  if(speed<9){b.sleepTime+=step;if(b.sleepTime>.55){b.vx=0;b.vy=0;b.sleep=true;}}
+  if(speed<7){b.sleepTime+=dt;if(b.sleepTime>.65){b.vx=0;b.vy=0;b.sleep=true;}}
   else b.sleepTime=0;
  }
-}
- for(let pass=0;pass<10;pass++){
-  for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
-   const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y;
-   let dist=Math.hypot(dx,dy);const min=a.r+b.r;
-   if(dist>=min)continue;
-   if(dist<.0001)dist=.0001;
-   const nx=dx/dist,ny=dy/dist,overlap=min-dist;
-   const aWasMoving=!a.sleep,bWasMoving=!b.sleep;
-   const correction=Math.max(0,overlap-.005)*.52;
-   a.x-=nx*correction;a.y-=ny*correction;
-   b.x+=nx*correction;b.y+=ny*correction;
-   if(overlap>.05&&(aWasMoving||bWasMoving)){
-    a.sleep=false;b.sleep=false;a.sleepTime=0;b.sleepTime=0;
-   }
-   const rvx=(b.sleep?0:b.vx)-(a.sleep?0:a.vx);
-   const rvy=(b.sleep?0:b.vy)-(a.sleep?0:a.vy);
-   const along=rvx*nx+rvy*ny;
-   if(along<0){
-    const impulse=-1.025*along*.5;
-    if(!a.sleep){a.vx-=impulse*nx;a.vy-=impulse*ny;}
-    if(!b.sleep){b.vx+=impulse*nx;b.vy+=impulse*ny;}
-    if(Math.abs(along)>8){a.sleep=false;b.sleep=false;a.sleepTime=0;b.sleepTime=0;}
-   }
-  }
-  for(const b of balls){
-   const dx=b.x-cx(),dy=b.y-cy(),dist=Math.hypot(dx,dy),limit=wallLimit(b);
-   if(dist>limit){
-    const nx=dx/(dist||1),ny=dy/(dist||1);
-    b.x=cx()+nx*limit;b.y=cy()+ny*limit;
-    const outward=(b.sleep?0:b.vx)*nx+(b.sleep?0:b.vy)*ny;
-    if(outward>0){
-     b.vx-=1.03*outward*nx;b.vy-=1.03*outward*ny;
-     b.vx*=.985;b.vy*=.985;
-    }
-   }
-  }
+ // Remove only if a ball somehow fell far outside due to an exceptional frame; replace it at the entry.
+ for(let i=0;i<balls.length;i++){
+  const b=balls[i];if(b.y>H+R*4){balls.splice(i--,1);addBall();}
  }
- for(const b of balls){
-  if(b.sleep)continue;
-  const speed=Math.hypot(b.vx,b.vy);
-  if(speed<9){b.sleepTime+=step;if(b.sleepTime>.55){b.vx=0;b.vy=0;b.sleep=true;}}
-  else b.sleepTime=0;
- }
-}
- }
- for(let pass=0;pass<3;pass++)for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
-  const a=balls[i],b=balls[j],dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy),min=a.r+b.r;
-  if(dist>=min||dist===0)continue;
-  const nx=dx/dist,ny=dy/dist,overlap=min-dist;
-  a.x-=nx*overlap*.5;a.y-=ny*overlap*.5;b.x+=nx*overlap*.5;b.y+=ny*overlap*.5;
-  const rel=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
-  if(rel<-.015){a.sleep=false;b.sleep=false;a.sleepTicks=0;b.sleepTicks=0;const impulse=-.72*rel*.5;a.vx-=impulse*nx;a.vy-=impulse*ny;b.vx+=impulse*nx;b.vy+=impulse*ny;}
- }
- for(const b of balls){if(b.sleep)continue;const speed=Math.hypot(b.vx,b.vy);if(speed<.20){if(++b.sleepTicks>12){b.vx=0;b.vy=0;b.sleep=true;}}else b.sleepTicks=0;}
 }
 function drawBall(b){
  const grad=ctx.createRadialGradient(b.x-b.r*.36,b.y-b.r*.43,b.r*.06,b.x,b.y,b.r*1.12);
@@ -212,26 +150,22 @@ function drawBall(b){
  ctx.save();ctx.shadowColor=colors[b.color];ctx.shadowBlur=7;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();ctx.shadowBlur=0;
  ctx.lineWidth=1;ctx.strokeStyle="#ffffff70";ctx.stroke();
  ctx.beginPath();ctx.ellipse(b.x-b.r*.23,b.y-b.r*.43,b.r*.38,b.r*.17,-.48,0,Math.PI*2);ctx.fillStyle="#ffffff9c";ctx.fill();
- ctx.beginPath();ctx.ellipse(b.x+b.r*.34,b.y+b.r*.42,b.r*.15,b.r*.09,-.5,0,Math.PI*2);ctx.fillStyle="#ffffff50";ctx.fill();
  ctx.restore();
 }
 function draw(){
  ctx.clearRect(0,0,W,H);
- // Subtle arena lighting
  const light=ctx.createRadialGradient(W*.5,0,5,W*.5,H*.35,H*.85);light.addColorStop(0,"#65bfff12");light.addColorStop(1,"#00152a00");ctx.fillStyle=light;ctx.fillRect(0,0,W,H);
  for(const b of balls)drawBall(b);
- if(chain.length){
-  ctx.save();ctx.beginPath();chain.forEach((b,i)=>i?ctx.lineTo(b.x,b.y):ctx.moveTo(b.x,b.y));ctx.lineWidth=R*.2;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#ffffffd9";ctx.shadowColor="#8be2ff";ctx.shadowBlur=15;ctx.stroke();
-  for(const b of chain){ctx.beginPath();ctx.arc(b.x,b.y,b.r+2,0,Math.PI*2);ctx.strokeStyle="#ffffff";ctx.lineWidth=2.5;ctx.stroke()}
-  ctx.restore();
- }
+ if(chain.length){ctx.save();ctx.beginPath();chain.forEach((b,i)=>i?ctx.lineTo(b.x,b.y):ctx.moveTo(b.x,b.y));ctx.lineWidth=R*.2;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#ffffffd9";ctx.shadowColor="#8be2ff";ctx.shadowBlur=15;ctx.stroke();for(const b of chain){ctx.beginPath();ctx.arc(b.x,b.y,b.r+2,0,Math.PI*2);ctx.strokeStyle="#fff";ctx.lineWidth=2.5;ctx.stroke();}ctx.restore();}
 }
-let accumulator=0;
 function loop(t){
- const elapsed=last?Math.min((t-last)/1000,.05):1/60;last=t;accumulator+=elapsed;
- const fixed=1/120;
- while(accumulator>=fixed){physics(fixed);accumulator-=fixed;}
- draw();raf=requestAnimationFrame(loop);
+ const elapsed=last?Math.min((t-last)/1000,.04):1/60;last=t;accumulator+=elapsed;
+ const fixed=1/120;while(accumulator>=fixed){solvePhysics(fixed);accumulator-=fixed;}
+ draw();requestAnimationFrame(loop);
+}
+function reset(){score=0;best=0;chain=[];active=false;pointer=null;clearing=false;seed();scoreUI();chainEl.textContent="";}
+document.getElementById("reset").addEventListener("click",reset);
+new ResizeObserver(resize).observe(arena);resize();scoreUI();requestAnimationFrame(loop);
 })();
 </script>
 </body>
