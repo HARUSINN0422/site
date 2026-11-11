@@ -80,7 +80,15 @@ function start(e){
 function move(e){
  if(!active||e.pointerId!==pointer)return;
  const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,lastBall=chain[chain.length-1];
- if(!lastBall)return;const used=new Set(chain);
+ if(!lastBall)return;
+ // Retracing the pointer over the previous ball removes the most recently added link.
+ if(chain.length>=2){
+  const previous=chain[chain.length-2];
+  if(Math.hypot(previous.x-x,previous.y-y)<R*2.25){
+   chain.pop();chainEl.textContent=chain.length?chain.length+" CHAIN":"";draw();return;
+  }
+ }
+ const used=new Set(chain);
  const candidates=balls.filter(b=>!b.dead&&!used.has(b)&&b.color===chain[0].color&&Math.hypot(b.x-lastBall.x,b.y-lastBall.y)<(lastBall.r+b.r+R*.38)*1.5);
  let chosen=null,bestD=R*2.25;for(const b of candidates){const d=Math.hypot(b.x-x,b.y-y);if(d<bestD){bestD=d;chosen=b;}}
  if(chosen){chain.push(chosen);chainEl.textContent=chain.length+" CHAIN";draw();}
