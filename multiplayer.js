@@ -48,7 +48,11 @@ function publicRoom(p) {
     opponent: room.players.find(x => x.id !== p.id)?.name || "",
     startAt: room.startAt || null,
     endsAt: room.endsAt || null,
-    duration: MATCH_MS
+    duration: MATCH_MS,
+    completed: !!room.completed,
+    myScore: typeof p.score === "number" ? p.score : null,
+    opponentScore: typeof room.players.find(x => x.id !== p.id)?.score === "number" ? room.players.find(x => x.id !== p.id).score : null,
+    opponentFinished: !!room.players.find(x => x.id !== p.id)?.finished
   };
 }
 function removePlayer(p) {
