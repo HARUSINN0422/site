@@ -1,3 +1,6 @@
+// Start the local matchmaking/ranking API alongside the GitHub-to-Apache sync worker.
+require("./multiplayer");
+
 /**
  * Sync the repository's AI/ directory to Apache's /var/www/html/AI/.
  * Run from the cloned repository with: node server.js
