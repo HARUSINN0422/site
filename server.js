@@ -2,7 +2,7 @@
 const multiplayerServer = require("./multiplayer");
 
 /**
- * Sync the repository's AI/ directory to Apache's /var/www/html/AI/.
+ * Sync the repository's AI/ directory to /var/www/domain/AI/.
  * Run from the cloned repository with: node server.js
  * Checks origin/main every 60 seconds.
  */
@@ -14,7 +14,7 @@ const { promisify } = require("node:util");
 const execFileAsync = promisify(execFile);
 const REPO_DIR = __dirname;
 const SOURCE_DIR = path.join(REPO_DIR, "AI");
-const WEB_ROOT = process.env.WEB_ROOT || "/var/www/html";
+const WEB_ROOT = process.env.WEB_ROOT || "/var/www/domain";
 const TARGET_DIR = path.join(WEB_ROOT, "AI");
 const TEMP_DIR = path.join(WEB_ROOT, ".AI-sync-tmp");
 const BACKUP_DIR = path.join(WEB_ROOT, ".AI-sync-backup");
