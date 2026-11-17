@@ -1,7 +1,5 @@
 "use strict";
 const http = require("node:http");
-const fs = require("node:fs");
-const path = require("node:path");
 const crypto = require("node:crypto");
 
 const PORT = Number(process.env.MULTIPLAYER_PORT || 3011);
@@ -12,17 +10,6 @@ const MATCH_MS = 60_000;
 const rooms = new Map();
 const waiting = [];
 const players = new Map();
-const dataDir = path.join(__dirname, "data");
-const rankingFile = path.join(dataDir, "pazuru-ranking.json");
-let ranking = [];
-try { ranking = JSON.parse(fs.readFileSync(rankingFile, "utf8")); if (!Array.isArray(ranking)) ranking = []; } catch {}
-
-function saveRanking() {
-  fs.mkdirSync(dataDir, { recursive: true });
-  const tmp = rankingFile + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify(ranking.slice(0, 200), null, 2));
-  fs.renameSync(tmp, rankingFile);
-}
 function send(res, status, body) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "Access-Control-Allow-Origin": "https://harusinn.com", "Vary": "Origin" });
   res.end(JSON.stringify(body));
@@ -43,6 +30,7 @@ function publicRoom(p) {
   if (!room) return { state: "gone" };
   return {
     state: p.state,
+    serverNow: Date.now(),
     playerId: p.id,
     roomId: room.id,
     opponent: room.players.find(x => x.id !== p.id)?.name || "",
@@ -127,18 +115,9 @@ const server = http.createServer(async (req, res) => {
       const score = Math.max(0, Math.min(1_000_000_000, Math.floor(Number(data.score) || 0)));
       p.score = score;
       p.finished = true;
-      if (room.players.every(x => x.finished || !players.has(x.id))) {
-        for (const x of room.players) if (typeof x.score === "number") {
-          ranking.push({ name: x.name, score: x.score, date: new Date().toISOString() });
-        }
-        ranking.sort((a, b) => b.score - a.score);
-        ranking = ranking.slice(0, 200);
-        saveRanking();
-        room.completed = true;
-      }
+      if (room.players.every(x => x.finished || !players.has(x.id))) room.completed = true;
       return send(res, 200, { ok: true, waitingForOpponent: !room.completed });
     }
-    if (req.method === "GET" && url.pathname === "/ranking") return send(res, 200, { ranking: ranking.slice(0, 20) });
     if (req.method === "POST" && url.pathname === "/leave") {
       const data = await body(req);
       removePlayer(players.get(String(data.id || "")));
