@@ -27,7 +27,17 @@ function cleanName(value) {
 }
 function publicRoom(p) {
   const room = rooms.get(p.roomId);
-  if (!room) return { state: "gone" };
+  if (!room) {
+    if (p.state === "waiting") return {
+      state: "waiting",
+      serverNow: Date.now(),
+      playerId: p.id,
+      startAt: null,
+      endsAt: null,
+      duration: MATCH_MS
+    };
+    return { state: "gone", serverNow: Date.now(), playerId: p.id };
+  }
   return {
     state: p.state,
     serverNow: Date.now(),
