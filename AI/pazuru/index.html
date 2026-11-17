@@ -144,7 +144,8 @@ function solvePhysics(dt){
  const gravity=1350,br=bowlRadius(),entranceHalf=R*1.45;
  if(gravitySettling>0){gravitySettling=Math.max(0,gravitySettling-dt);for(const b of balls){b.sleep=false;b.sleepTime=0;}}
  for(const b of balls){
-  if(b.sleep)continue;
+  // Always integrate every ball. No sleeping/frozen-body shortcut.
+  b.sleep=false;b.sleepTime=0;
   b.vy+=gravity*dt;b.vx*=Math.exp(-1.3*dt);b.vy*=Math.exp(-.18*dt);
   b.x+=b.vx*dt;b.y+=b.vy*dt;
  }
@@ -152,22 +153,17 @@ function solvePhysics(dt){
  for(let pass=0;pass<4;pass++){
   for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
    const a=balls[i],b=balls[j];
-   // Sleeping balls never move relative to one another; skip their pair entirely.
-   if(a.sleep&&b.sleep)continue;
    const dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy),min=a.r+b.r;
    if(dist>=min)continue;
    const d=Math.max(dist,.001),nx=dx/d,ny=dy/d,overlap=min-d;
-   const ia=a.sleep?0:1,ib=b.sleep?0:1,total=ia+ib;
-   if(total){const correction=Math.max(0,overlap-.001)*.52;
-    a.x-=nx*correction*ia/total;a.y-=ny*correction*ia/total;
-    b.x+=nx*correction*ib/total;b.y+=ny*correction*ib/total;
-   }
-   const rvx=(b.sleep?0:b.vx)-(a.sleep?0:a.vx),rvy=(b.sleep?0:b.vy)-(a.sleep?0:a.vy),along=rvx*nx+rvy*ny;
-   if(along<0&&total){
-    const impulse=-(1.02)*along/total;
-    if(!a.sleep){a.vx-=impulse*nx;a.vy-=impulse*ny;a.sleepTime=0;}
-    if(!b.sleep){b.vx+=impulse*nx;b.vy+=impulse*ny;b.sleepTime=0;}
-    if(Math.abs(along)>7){a.sleep=false;b.sleep=false;}
+   const correction=Math.max(0,overlap-.001)*.52;
+   a.x-=nx*correction*.5;a.y-=ny*correction*.5;
+   b.x+=nx*correction*.5;b.y+=ny*correction*.5;
+   const rvx=b.vx-a.vx,rvy=b.vy-a.vy,along=rvx*nx+rvy*ny;
+   if(along<0){
+    const impulse=-1.02*along*.5;
+    a.vx-=impulse*nx;a.vy-=impulse*ny;
+    b.vx+=impulse*nx;b.vy+=impulse*ny;
    }
   }
   for(const b of balls){
@@ -181,14 +177,8 @@ function solvePhysics(dt){
    }
   }
  }
- for(const b of balls){
-  if(b.sleep)continue;
-  const speed=Math.hypot(b.vx,b.vy);
-  // Do not let the initial pile fall asleep before it has reached the lower bowl.
-  if(gravitySettling>0 || b.y < cy()+bowlRadius()*.58){b.sleepTime=0;continue;}
-  if(speed<7){b.sleepTime+=dt;if(b.sleepTime>.65){b.vx=0;b.vy=0;b.sleep=true;}}
-  else b.sleepTime=0;
- }
+ // No sleep transition: all balls remain active in the physics solver.
+ for(const b of balls){b.sleep=false;b.sleepTime=0;}
  // Remove only if a ball somehow fell far outside due to an exceptional frame; replace it at the entry.
  for(let i=0;i<balls.length;i++){
   const b=balls[i];if(b.y>H+R*4){balls.splice(i--,1);addBall();}
