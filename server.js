@@ -1,5 +1,5 @@
 // Start the local matchmaking/ranking API alongside the GitHub-to-Apache sync worker.
-require("./multiplayer");
+const multiplayerServer = require("./multiplayer");
 
 /**
  * Sync the repository's AI/ directory to Apache's /var/www/html/AI/.
@@ -8,7 +8,7 @@ require("./multiplayer");
  */
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { execFile } = require("node:child_process");
+const { execFile, spawn } = require("node:child_process");
 const { promisify } = require("node:util");
 
 const execFileAsync = promisify(execFile);
@@ -22,7 +22,32 @@ const BRANCH = process.env.GIT_BRANCH || "main";
 const INTERVAL_MS = 60 * 1000;
 
 let syncing = false;
+let restarting = false;
 let lastSyncedCommit = null;
+
+function restartProcess() {
+  if (restarting) return;
+  restarting = true;
+  console.log(new Date().toISOString(), "GitHub update detected; restarting server.js");
+  multiplayerServer.close(() => {
+    const child = spawn(process.execPath, process.argv.slice(1), {
+      cwd: REPO_DIR,
+      env: process.env,
+      stdio: "inherit",
+    });
+    child.once("spawn", () => {
+      console.log(new Date().toISOString(), "Replacement server.js started");
+      process.exit(0);
+    });
+    child.once("error", (error) => {
+      console.error(new Date().toISOString(), "Failed to restart server.js:", error);
+      process.exitCode = 1;
+    });
+  });
+  if (typeof multiplayerServer.closeAllConnections === "function") {
+    multiplayerServer.closeAllConnections();
+  }
+}
 
 async function git(...args) {
   const { stdout } = await execFileAsync("git", args, {
@@ -71,6 +96,10 @@ async function updateAndSync(isStartup = false) {
       await syncToApache();
       lastSyncedCommit = after;
       console.log(new Date().toISOString(), "AI files synced to", TARGET_DIR, "commit", after);
+      if (after !== before) {
+        restartProcess();
+        return;
+      }
     } else {
       console.log(new Date().toISOString(), "No changes:", after);
     }
