@@ -50,12 +50,12 @@ function makeBall(x,y,color=randColor(),vy=0){return{x,y,vx:rand(-8,8),vy,r:R*.9
 function resize(){
  const rect=arena.getBoundingClientRect();D=Math.min(devicePixelRatio||1,1.5);W=rect.width;H=rect.height;
  canvas.width=Math.round(W*D);canvas.height=Math.round(H*D);ctx.setTransform(D,0,0,D,0,0);
- R=Math.max(13,Math.min(24,W/18));
+ R=Math.max(17,Math.min(30,W/14));
  if(!balls.length)seed();
  else for(const b of balls)confine(b);
 }
 function seed(){
- balls=[];const spacing=R*1.98,rowStep=R*1.72,br=bowlRadius(),inner=br-R*.98;let row=0;
+ balls=[];const spacing=R*2.02,rowStep=R*1.82,br=bowlRadius(),inner=br-R*.98;let row=0;
  for(let y=cy()-inner;y<=cy()+inner;y+=rowStep,row++){
   const half=Math.sqrt(Math.max(0,inner*inner-(y-cy())**2)),offset=row%2?R:0;
   for(let x=cx()-half+offset;x<=cx()+half;x+=spacing)balls.push(makeBall(x,y,randColor(),0));
@@ -125,9 +125,16 @@ function end(){
 canvas.addEventListener("pointerdown",start);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",end);
 canvas.addEventListener("pointercancel",()=>{active=false;pointer=null;chain=[];chainEl.textContent="";draw();});
 function clearChain(){
- clearing=true;const removed=chain.slice(),n=removed.length;score+=n*n*10;best=Math.max(best,n);scoreUI();chainEl.textContent=n+" CHAIN";
- for(const b of removed)b.dead=true;chain=[];
- setTimeout(()=>{balls=balls.filter(b=>!b.dead);for(let i=0;i<n;i++)addBall();clearing=false;chainEl.textContent="";},160);
+ const removed=chain.slice(),n=removed.length;
+ score+=n*n*10;best=Math.max(best,n);scoreUI();
+ // Remove matched balls and replenish immediately so the next chain can start on release.
+ const removedSet=new Set(removed);
+ balls=balls.filter(b=>!removedSet.has(b));
+ chain=[];
+ for(let i=0;i<n;i++)addBall();
+ clearing=false;
+ chainEl.textContent="";
+ draw();
 }
 function solvePhysics(dt){
  const gravity=1350,br=bowlRadius(),entranceHalf=R*1.45;
