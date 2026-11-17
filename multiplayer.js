@@ -119,13 +119,10 @@ const server = http.createServer(async (req, res) => {
       if (!p) return send(res, 404, { error: "対戦が見つかりません" });
       p.lastSeen = Date.now();
       const room = rooms.get(p.roomId);
-      if (!room || !room.startAt || !room.endsAt || p.state === "waiting") {
+      if (!room || !room.startAt || !room.endsAt || p.state !== "playing") {
         return send(res, 409, { error: "対戦開始前のため結果を登録できません" });
       }
       if (room.completed) return send(res, 200, { ok: true, waitingForOpponent: false });
-      if (Date.now() < room.endsAt - 1500) {
-        return send(res, 409, { error: "対戦終了時刻になっていません" });
-      }
       if (p.finished) return send(res, 200, { ok: true, waitingForOpponent: !room.completed });
       const score = Math.max(0, Math.min(1_000_000_000, Math.floor(Number(data.score) || 0)));
       p.score = score;
