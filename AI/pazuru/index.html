@@ -184,7 +184,8 @@ function solvePhysics(dt){
  for(const b of balls){
   if(b.sleep)continue;
   const speed=Math.hypot(b.vx,b.vy);
-  if(gravitySettling>0){b.sleepTime=0;continue;}
+  // Do not let the initial pile fall asleep before it has reached the lower bowl.
+  if(gravitySettling>0 || b.y < cy()+bowlRadius()*.58){b.sleepTime=0;continue;}
   if(speed<7){b.sleepTime+=dt;if(b.sleepTime>.65){b.vx=0;b.vy=0;b.sleep=true;}}
   else b.sleepTime=0;
  }
@@ -237,7 +238,7 @@ document.getElementById("reset").addEventListener("click",()=>{if(!multiplayer)r
 
 const home=document.getElementById("home"),main=document.querySelector("main"),homeMessage=document.getElementById("homeMessage"),multiPanel=document.getElementById("multiPanel"),nameInput=document.getElementById("playerName");
 function syncServerClock(data){if(Number.isFinite(data.serverNow))serverTimeOffset=data.serverNow-Date.now();}
-function startGravity(){gravitySettling=4;for(const b of balls){b.sleep=false;b.sleepTime=0;b.vx=rand(-14,14);b.vy=rand(-3,3);}}
+function startGravity(){gravitySettling=12;for(const b of balls){b.sleep=false;b.sleepTime=0;b.vx=rand(-10,10);b.vy=rand(35,65);}}
 function showGame(){home.style.display="none";main.style.display="block";reset();startGravity();}
 function showResult(mine,other,opponentName=""){home.style.display="none";main.style.display="none";const screen=document.getElementById("resultScreen");screen.style.display="block";document.getElementById("resultMyScore").textContent=Number(mine||0).toLocaleString("ja-JP");const box=document.getElementById("opponentResultBox");if(other!==null&&other!==undefined){box.style.display="flex";document.getElementById("resultOpponentScore").textContent=Number(other).toLocaleString("ja-JP");const a=Number(mine||0),b=Number(other);document.getElementById("resultOutcome").textContent=a>b?"WIN":a<b?"LOSE":"DRAW";document.getElementById("resultDetail").textContent=opponentName?opponentName+" との対戦結果":"対戦結果";}else{box.style.display="none";document.getElementById("resultOutcome").textContent="FINISH";document.getElementById("resultDetail").textContent="シングルプレイの結果";}}
 document.getElementById("resultHomeBtn").addEventListener("click",()=>{document.getElementById("resultScreen").style.display="none";showHome("");playerId=null;multiplayer=false;matchStarted=false;matchEnded=false;finishSent=false;});
