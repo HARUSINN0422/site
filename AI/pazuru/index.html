@@ -41,14 +41,14 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 const canvas=document.getElementById("game"),ctx=canvas.getContext("2d"),arena=canvas.parentElement;
 const scoreEl=document.getElementById("score"),bestEl=document.getElementById("best"),chainEl=document.getElementById("chain");
 const colors=["#ff647d","#ffd34e","#56d99a","#aa86ff"];
-let W=0,H=0,D=1,R=23,balls=[],chain=[],active=false,pointer=null,score=0,best=0,last=0,clearing=false,accumulator=0;
+let W=0,H=0,D=1,R=23,balls=[],chain=[],active=false,pointer=null,pendingPointer=null,pointerMoveScheduled=false,score=0,best=0,last=0,clearing=false,accumulator=0;
 let multiplayer=false,playerId=null,matchStartAt=0,matchEndAt=0,serverTimeOffset=0,matchStarted=false,matchEnded=false,statusTimer=null,finishSent=false;
 const randColor=()=>Math.floor(Math.random()*colors.length);
 const rand=(a,b)=>a+Math.random()*(b-a);
 const cx=()=>W/2,cy=()=>H/2,bowlRadius=()=>Math.min(W,H)*.485;
 function makeBall(x,y,color=randColor(),vy=0){return{x,y,vx:rand(-8,8),vy,r:R*.94,color,sleep:false,sleepTime:0,dead:false};}
 function resize(){
- const rect=arena.getBoundingClientRect();D=Math.min(devicePixelRatio||1,2);W=rect.width;H=rect.height;
+ const rect=arena.getBoundingClientRect();D=Math.min(devicePixelRatio||1,1.5);W=rect.width;H=rect.height;
  canvas.width=Math.round(W*D);canvas.height=Math.round(H*D);ctx.setTransform(D,0,0,D,0,0);
  R=Math.max(13,Math.min(24,W/18));
  if(!balls.length)seed();
@@ -81,25 +81,46 @@ function start(e){
  if(clearing||matchEnded||(multiplayer&&!matchStarted))return;const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,b=nearest(x,y,R*1.35);
  if(!b)return;e.preventDefault();canvas.setPointerCapture(e.pointerId);pointer=e.pointerId;active=true;chain=[b];chainEl.textContent="1 CHAIN";draw();
 }
-function move(e){
- if(!active||e.pointerId!==pointer)return;
- const rect=canvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top,lastBall=chain[chain.length-1];
+function processPointerMove(clientX,clientY){
+ if(!active)return;
+ const rect=canvas.getBoundingClientRect(),x=clientX-rect.left,y=clientY-rect.top,lastBall=chain[chain.length-1];
  if(!lastBall)return;
  // Retracing the pointer over the previous ball removes the most recently added link.
  if(chain.length>=2){
   const previous=chain[chain.length-2];
   if(Math.hypot(previous.x-x,previous.y-y)<R*2.25){
-   chain.pop();chainEl.textContent=chain.length?chain.length+" CHAIN":"";draw();return;
+   chain.pop();chainEl.textContent=chain.length?chain.length+" CHAIN":"";return;
   }
  }
  const used=new Set(chain);
- const candidates=balls.filter(b=>!b.dead&&!used.has(b)&&b.color===chain[0].color&&Math.hypot(b.x-lastBall.x,b.y-lastBall.y)<(lastBall.r+b.r+R*.38)*1.5);
- let chosen=null,bestD=R*2.25;for(const b of candidates){const d=Math.hypot(b.x-x,b.y-y);if(d<bestD){bestD=d;chosen=b;}}
- if(chosen){chain.push(chosen);chainEl.textContent=chain.length+" CHAIN";draw();}
+ const linkLimit=(lastBall.r+R*.94+R*.38)*1.5;
+ let chosen=null,bestD=R*2.25;
+ // Find the next matching orb without allocating a filtered array on every pointer event.
+ for(const b of balls){
+  if(b.dead||used.has(b)||b.color!==chain[0].color)continue;
+  const dx=b.x-lastBall.x,dy=b.y-lastBall.y;
+  if(dx*dx+dy*dy>linkLimit*linkLimit)continue;
+  const px=b.x-x,py=b.y-y,d2=px*px+py*py;
+  if(d2<bestD*bestD){bestD=Math.sqrt(d2);chosen=b;}
+ }
+ if(chosen){chain.push(chosen);chainEl.textContent=chain.length+" CHAIN";}
+}
+function move(e){
+ if(!active||e.pointerId!==pointer)return;
+ pendingPointer={x:e.clientX,y:e.clientY};
+ if(pointerMoveScheduled)return;
+ pointerMoveScheduled=true;
+ requestAnimationFrame(()=>{
+  pointerMoveScheduled=false;
+  const p=pendingPointer;pendingPointer=null;
+  if(p)processPointerMove(p.x,p.y);
+ });
 }
 function end(){
- if(!active)return;active=false;pointer=null;
- if(chain.length>=3)clearChain();else{chain=[];chainEl.textContent="";draw();}
+ if(!active)return;
+ if(pendingPointer){const p=pendingPointer;pendingPointer=null;processPointerMove(p.x,p.y);}
+ active=false;pointer=null;pendingPointer=null;
+ if(chain.length>=3)clearChain();else{chain=[];chainEl.textContent="";}
 }
 canvas.addEventListener("pointerdown",start);canvas.addEventListener("pointermove",move);canvas.addEventListener("pointerup",end);
 canvas.addEventListener("pointercancel",()=>{active=false;pointer=null;chain=[];chainEl.textContent="";draw();});
@@ -116,7 +137,7 @@ function solvePhysics(dt){
   b.x+=b.vx*dt;b.y+=b.vy*dt;
  }
  // Circle wall with a narrow top-only entrance. Once a ball has crossed the rim, the wall closes behind it.
- for(let pass=0;pass<8;pass++){
+ for(let pass=0;pass<4;pass++){
   for(let i=0;i<balls.length;i++)for(let j=i+1;j<balls.length;j++){
    const a=balls[i],b=balls[j];
    // Sleeping balls never move relative to one another; skip their pair entirely.
@@ -162,7 +183,7 @@ function solvePhysics(dt){
 function drawBall(b){
  const grad=ctx.createRadialGradient(b.x-b.r*.36,b.y-b.r*.43,b.r*.06,b.x,b.y,b.r*1.12);
  grad.addColorStop(0,"#ffffff");grad.addColorStop(.12,colors[b.color]);grad.addColorStop(.68,colors[b.color]);grad.addColorStop(1,"#152b53");
- ctx.save();ctx.shadowColor=colors[b.color];ctx.shadowBlur=7;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();ctx.shadowBlur=0;
+ ctx.save();ctx.shadowBlur=0;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();ctx.shadowBlur=0;
  ctx.lineWidth=1;ctx.strokeStyle="#ffffff70";ctx.stroke();
  ctx.beginPath();ctx.ellipse(b.x-b.r*.23,b.y-b.r*.43,b.r*.38,b.r*.17,-.48,0,Math.PI*2);ctx.fillStyle="#ffffff9c";ctx.fill();
  ctx.restore();
@@ -194,7 +215,7 @@ function loop(t){
   }
  }
  const elapsed=last?Math.min((t-last)/1000,.04):1/60;last=t;accumulator+=elapsed;
- const fixed=1/120;while(accumulator>=fixed){solvePhysics(fixed);accumulator-=fixed;}
+ const fixed=1/60;while(accumulator>=fixed){solvePhysics(fixed);accumulator-=fixed;}
  draw();requestAnimationFrame(loop);
 }
 function reset(){score=0;best=0;chain=[];active=false;pointer=null;clearing=false;seed();scoreUI();chainEl.textContent="";}
