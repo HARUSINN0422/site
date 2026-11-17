@@ -28,21 +28,9 @@ let lastSyncedCommit = null;
 function restartProcess() {
   if (restarting) return;
   restarting = true;
-  console.log(new Date().toISOString(), "GitHub update detected; restarting server.js");
+  console.log(new Date().toISOString(), "GitHub update detected; requesting screen wrapper restart");
   multiplayerServer.close(() => {
-    const child = spawn(process.execPath, process.argv.slice(1), {
-      cwd: REPO_DIR,
-      env: process.env,
-      stdio: "inherit",
-    });
-    child.once("spawn", () => {
-      console.log(new Date().toISOString(), "Replacement server.js started");
-      process.exit(0);
-    });
-    child.once("error", (error) => {
-      console.error(new Date().toISOString(), "Failed to restart server.js:", error);
-      process.exitCode = 1;
-    });
+    process.exit(75);
   });
   if (typeof multiplayerServer.closeAllConnections === "function") {
     multiplayerServer.closeAllConnections();
