@@ -68,7 +68,9 @@ function removePlayer(p) {
 }
 function makeRoom(a, b, solo) {
   const id = crypto.randomUUID();
-  const room = { id, players: [a, ...(b ? [b] : [])], solo, startAt: Date.now() + COUNTDOWN_MS, endsAt: Date.now() + COUNTDOWN_MS + MATCH_MS };
+  const startAt = Date.now() + COUNTDOWN_MS;
+  const room = { id, players: [a, ...(b ? [b] : [])], solo, startAt, endsAt: startAt + MATCH_MS, completed: false };
+  for (const p of room.players) { p.score = null; p.finished = false; }
   rooms.set(id, room);
   for (const p of room.players) { p.roomId = id; p.state = "countdown"; }
 }
@@ -117,9 +119,18 @@ const server = http.createServer(async (req, res) => {
       if (!p) return send(res, 404, { error: "対戦が見つかりません" });
       p.lastSeen = Date.now();
       const room = rooms.get(p.roomId);
+      if (!room || !room.startAt || !room.endsAt || p.state === "waiting") {
+        return send(res, 409, { error: "対戦開始前のため結果を登録できません" });
+      }
+      if (room.completed) return send(res, 200, { ok: true, waitingForOpponent: false });
+      if (Date.now() < room.endsAt - 1500) {
+        return send(res, 409, { error: "対戦終了時刻になっていません" });
+      }
+      if (p.finished) return send(res, 200, { ok: true, waitingForOpponent: !room.completed });
       const score = Math.max(0, Math.min(1_000_000_000, Math.floor(Number(data.score) || 0)));
-      p.score = score; p.finished = true;
-      if (room && room.players.every(x => x.finished || !players.has(x.id))) {
+      p.score = score;
+      p.finished = true;
+      if (room.players.every(x => x.finished || !players.has(x.id))) {
         for (const x of room.players) if (typeof x.score === "number") {
           ranking.push({ name: x.name, score: x.score, date: new Date().toISOString() });
         }
@@ -128,7 +139,7 @@ const server = http.createServer(async (req, res) => {
         saveRanking();
         room.completed = true;
       }
-      return send(res, 200, { ok: true, waitingForOpponent: !!room && !room.completed });
+      return send(res, 200, { ok: true, waitingForOpponent: !room.completed });
     }
     if (req.method === "GET" && url.pathname === "/ranking") return send(res, 200, { ranking: ranking.slice(0, 20) });
     if (req.method === "POST" && url.pathname === "/leave") {
