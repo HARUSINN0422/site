@@ -170,7 +170,7 @@ function draw(){
  if(chain.length){ctx.save();ctx.beginPath();chain.forEach((b,i)=>i?ctx.lineTo(b.x,b.y):ctx.moveTo(b.x,b.y));ctx.lineWidth=R*.2;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#ffffffd9";ctx.shadowColor="#8be2ff";ctx.shadowBlur=15;ctx.stroke();for(const b of chain){ctx.beginPath();ctx.arc(b.x,b.y,b.r+2,0,Math.PI*2);ctx.strokeStyle="#fff";ctx.lineWidth=2.5;ctx.stroke();}ctx.restore();}
 }
 function loop(t){
- if(multiplayer&&!matchEnded){const now=Date.now();if(!matchStarted&&now>=matchStartAt)matchStarted=true;if(matchStarted){const left=Math.max(0,Math.ceil((matchEndAt-now)/1000));document.getElementById("matchClock").textContent=left+"s";if(left<=0)finishMatch();}else document.getElementById("matchClock").textContent="START";}
+ if(multiplayer&&!matchEnded&&matchStartAt>0&&matchEndAt>0){const now=Date.now();if(!matchStarted&&now>=matchStartAt)matchStarted=true;if(matchStarted){const left=Math.max(0,Math.ceil((matchEndAt-now)/1000));document.getElementById("matchClock").textContent=left+"s";if(left<=0)finishMatch();}else document.getElementById("matchClock").textContent="START";}
  const elapsed=last?Math.min((t-last)/1000,.04):1/60;last=t;accumulator+=elapsed;
  const fixed=1/120;while(accumulator>=fixed){solvePhysics(fixed);accumulator-=fixed;}
  draw();requestAnimationFrame(loop);
