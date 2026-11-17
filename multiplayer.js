@@ -129,3 +129,5 @@ const server = http.createServer(async (req, res) => {
   }
 });
 server.listen(PORT, HOST, () => console.log("Pazuru multiplayer API listening on " + HOST + ":" + PORT));
+
+module.exports = server;
