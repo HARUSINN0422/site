@@ -56,7 +56,11 @@ function resize(){
 }
 function seed(){
  balls=[];const spacing=R*2.02,rowStep=R*1.82,br=bowlRadius(),inner=br-R*.98;let row=0;
- for(let y=cy()-inner;y<=cy()+inner;y+=rowStep,row++){
+ // Place the initial pile only in the upper half of the bowl.
+ // The lower half stays empty so gravity can visibly gather every ball at the bottom.
+ const topY=cy()-inner+R;
+ const bottomY=cy()+inner*.04;
+ for(let y=topY;y<=bottomY;y+=rowStep,row++){
   const half=Math.sqrt(Math.max(0,inner*inner-(y-cy())**2)),offset=row%2?R:0;
   for(let x=cx()-half+offset;x<=cx()+half;x+=spacing)balls.push(makeBall(x,y,randColor(),0));
  }
