@@ -50,7 +50,7 @@ function makeBall(x,y,color=randColor(),vy=0){return{x,y,vx:rand(-8,8),vy,r:R*.9
 function resize(){
  const rect=arena.getBoundingClientRect();D=Math.min(devicePixelRatio||1,1.5);W=rect.width;H=rect.height;
  canvas.width=Math.round(W*D);canvas.height=Math.round(H*D);ctx.setTransform(D,0,0,D,0,0);
- R=Math.max(12.7,Math.min(22.35,W/18.8));
+ R=Math.max(17,Math.min(30,W/14));
  if(!balls.length)seed();
  else for(const b of balls)confine(b);
 }
@@ -59,7 +59,7 @@ function seed(){
  // Place the initial pile only in the upper half of the bowl.
  // The lower half stays empty so gravity can visibly gather every ball at the bottom.
  const topY=cy()-inner+R;
- const bottomY=cy()+inner*.04;
+ const bottomY=cy()+inner*.5;
  for(let y=topY;y<=bottomY;y+=rowStep,row++){
   const half=Math.sqrt(Math.max(0,inner*inner-(y-cy())**2)),offset=row%2?R:0;
   for(let x=cx()-half+offset;x<=cx()+half;x+=spacing)balls.push(makeBall(x,y,randColor(),0));
