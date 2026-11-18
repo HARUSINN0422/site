@@ -50,7 +50,7 @@ function makeBall(x,y,color=randColor(),vy=0){return{x,y,vx:rand(-8,8),vy,r:R*.9
 function resize(){
  const rect=arena.getBoundingClientRect();D=Math.min(devicePixelRatio||1,1.5);W=rect.width;H=rect.height;
  canvas.width=Math.round(W*D);canvas.height=Math.round(H*D);ctx.setTransform(D,0,0,D,0,0);
- R=Math.max(17,Math.min(30,W/14));
+ R=Math.max(12.7,Math.min(22.35,W/18.8));
  if(!balls.length)seed();
  else for(const b of balls)confine(b);
 }
